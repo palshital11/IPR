@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Study Plan</title>
+
+<style>
+
+*{box-sizing:border-box}
+
+body{
+margin:0;
+font-family:Arial;
+background:#f4f6f9;
+display:flex;
+justify-content:center;
+}
+
+.app{
+width:390px;
+min-height:100vh;
+background:#f4f6f9;
+position:relative;
+padding-bottom:70px;
+}
+
+/* HEADER */
+
+.header{
+display:flex;
+justify-content:space-between;
+padding:15px;
+font-weight:600;
+}
+
+/* PROGRESS */
+
+.progress-card{
+background:#eaf2fb;
+border-radius:15px;
+margin:10px;
+padding:15px;
+display:flex;
+justify-content:space-between;
+align-items:center;
+}
+
+.circle{
+width:80px;
+height:80px;
+border-radius:50%;
+border:8px solid #d9e3ef;
+display:flex;
+align-items:center;
+justify-content:center;
+font-weight:600;
+}
+
+/* TASK CARD */
+
+.card{
+background:white;
+margin:10px;
+border-radius:15px;
+padding:15px;
+box-shadow:0 2px 6px rgba(0,0,0,0.05);
+}
+
+.card-top{
+font-size:12px;
+color:#777;
+}
+
+.card-title{
+font-size:18px;
+font-weight:600;
+}
+
+.card-footer{
+display:flex;
+justify-content:space-between;
+margin-top:8px;
+}
+
+.status{
+font-size:12px;
+padding:5px 10px;
+border-radius:20px;
+}
+
+.completed{
+background:#d4f6df;
+color:#1c7c40;
+}
+
+.pending{
+background:#fde4e4;
+color:#b54848;
+}
+
+/* SEARCH */
+
+.search{
+margin:10px;
+}
+
+.search input{
+width:100%;
+padding:10px;
+border-radius:25px;
+border:none;
+outline:none;
+}
+
+/* WEEK */
+
+.week span{
+background:#e6f0fb;
+padding:5px 10px;
+border-radius:15px;
+font-size:12px;
+margin-right:5px;
+}
+
+/* BOTTOM NAV */
+
+.bottom{
+position:fixed;
+bottom:0;
+width:390px;
+background:white;
+display:flex;
+justify-content:space-around;
+padding:10px 0;
+border-top:1px solid #ddd;
+z-index:10;
+}
+
+.nav-btn{
+text-align:center;
+font-size:12px;
+cursor:pointer;
+}
+
+.plus{
+width:50px;
+height:50px;
+border-radius:50%;
+background:#1976ff;
+color:white;
+display:flex;
+align-items:center;
+justify-content:center;
+font-size:28px;
+margin-top:-20px;
+cursor:pointer;
+}
+
+/* MODAL */
+
+.modal{
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:rgba(0,0,0,0.4);
+display:none;
+align-items:center;
+justify-content:center;
+z-index:100;
+}
+
+.modal-box{
+background:white;
+padding:20px;
+border-radius:15px;
+width:300px;
+}
+
+.modal-box input{
+width:100%;
+margin-bottom:10px;
+padding:8px;
+}
+
+button{
+padding:8px 12px;
+border:none;
+background:#1976ff;
+color:white;
+border-radius:6px;
+cursor:pointer;
+}
+
+.hidden{
+display:none;
+}
+
+</style>
+</head>
+
+
+<body>
+
+<div class="app">
+
+<!-- DAILY PAGE -->
+
+<div id="dailyPage">
+
+<div class="header">
+<span>Study Plan</span>
+<span>📅</span>
+</div>
+
+<div class="progress-card">
+
+<div>
+<div>My Plan</div>
+<div style="font-weight:600">For Today</div>
+<div id="totalTime">Total: 0 tasks</div>
+</div>
+
+<div class="circle" id="progressCircle">0%</div>
+
+</div>
+
+<div id="taskList"></div>
+
+</div>
+
+
+<!-- SUBJECT PAGE -->
+
+<div id="subjectPage" class="hidden">
+
+<div class="header">
+<span onclick="showDaily()">←</span>
+<span>Subjects</span>
+<span></span>
+</div>
+
+<div class="search">
+<input placeholder="Search subjects..." oninput="searchSubjects(this.value)">
+</div>
+
+<div id="subjectList"></div>
+
+</div>
+
+
+<!-- NAVBAR -->
+
+<div class="bottom">
+
+<div class="nav-btn" onclick="showDaily()">
+📋
+<div>Daily Plan</div>
+</div>
+
+<div class="plus" onclick="openModal()">+</div>
+
+<div class="nav-btn" onclick="showSubjects()">
+🗓
+<div>Timetable</div>
+</div>
+
+</div>
+
+
+<!-- MODAL -->
+
+<div class="modal" id="modal">
+
+<div class="modal-box">
+
+<h3>Add Study Task</h3>
+
+<input id="subject" placeholder="Subject">
+<input id="time" placeholder="Time (8:00 - 10:00)">
+<input id="target" placeholder="Target (1h 30m)">
+
+<button onclick="addTask()">Add Task</button>
+
+</div>
+
+</div>
+
+</div>
+
+
+<script>
+
+let tasks=JSON.parse(localStorage.getItem("tasks"))||[];
+
+function save(){
+localStorage.setItem("tasks",JSON.stringify(tasks));
+}
+
+function render(){
+
+let list=document.getElementById("taskList");
+let subjects=document.getElementById("subjectList");
+
+list.innerHTML="";
+subjects.innerHTML="";
+
+let completed=0;
+
+tasks.forEach((t,i)=>{
+
+if(t.done) completed++;
+
+list.innerHTML+=`
+
+<div class="card">
+
+<div class="card-top">${t.time}</div>
+
+<div class="card-title">${t.subject}</div>
+
+<div class="card-footer">
+
+<div>Target: ${t.target}</div>
+
+<div>
+
+<span class="status ${t.done?'completed':'pending'}">
+${t.done?'Completed':'Pending'}
+</span>
+
+<button onclick="toggleTask(${i})">✓</button>
+
+</div>
+
+</div>
+
+</div>
+
+`;
+
+subjects.innerHTML+=`
+
+<div class="card subject-card">
+
+<div class="card-title">${t.subject}</div>
+
+<div style="font-size:12px;margin-top:5px">
+⏱ ${t.time}
+</div>
+
+<div class="week">
+<span>Mon</span>
+<span>Tue</span>
+<span>Wed</span>
+<span>Thu</span>
+<span>Fri</span>
+<span>Sat</span>
+</div>
+
+</div>
+
+`;
+
+});
+
+let percent=tasks.length?Math.round(completed/tasks.length*100):0;
+
+document.getElementById("progressCircle").innerText=percent+"%";
+
+document.getElementById("totalTime").innerText="Total: "+tasks.length+" tasks";
+
+}
+
+function addTask(){
+
+let subject=document.getElementById("subject").value;
+let time=document.getElementById("time").value;
+let target=document.getElementById("target").value;
+
+if(!subject)return;
+
+tasks.push({
+subject:subject,
+time:time,
+target:target,
+done:false
+});
+
+save();
+render();
+closeModal();
+
+document.getElementById("subject").value="";
+document.getElementById("time").value="";
+document.getElementById("target").value="";
+}
+
+function toggleTask(i){
+
+tasks[i].done=!tasks[i].done;
+
+save();
+render();
+
+}
+
+function openModal(){
+document.getElementById("modal").style.display="flex";
+}
+
+function closeModal(){
+document.getElementById("modal").style.display="none";
+}
+
+window.onclick=function(e){
+if(e.target.id==="modal") closeModal();
+}
+
+function showDaily(){
+document.getElementById("dailyPage").classList.remove("hidden");
+document.getElementById("subjectPage").classList.add("hidden");
+}
+
+function showSubjects(){
+document.getElementById("dailyPage").classList.add("hidden");
+document.getElementById("subjectPage").classList.remove("hidden");
+}
+
+function searchSubjects(q){
+
+q=q.toLowerCase();
+
+let cards=document.querySelectorAll("#subjectList .card");
+
+cards.forEach(card=>{
+
+let subject=card.querySelector(".card-title").innerText.toLowerCase();
+
+if(subject.includes(q)){
+card.style.display="block";
+}
+else{
+card.style.display="none";
+}
+
+});
+
+}
+
+render();
+
+</script>
+
+</body>
+</html>
